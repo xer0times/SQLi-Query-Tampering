@@ -1,6 +1,6 @@
 SQLi Query Tampering
 ==================
-SQLi Query Tampering extends and add custom Payload Generator/Processor in 
+SQLi Query Tampering extends and adds custom Payload Generator/Processor in 
 Burp Suite's Intruder. 
 
 ![](img/intruder.png)
@@ -62,6 +62,9 @@ The list of Evasion Techniques:
 - You can add a decode rule in Payload Processing section if you need URL-decoded payloads
 
 ![](img/url-decod.png)
+
+#### Bugs
+Please make a Github issue.
 
 #### Changelog:
 **1.0:**
