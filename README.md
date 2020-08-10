@@ -7,7 +7,7 @@ Burp Suite's Intruder.
 
 #### Advantages and Benefits
 Sqlmap is a great automated tool for SQL vulnerabilities but it can be a little
-noisy when you perform penetesting or bug hunting!
+noisy when you perform pentesting or bug hunting!
 One of the cool part of Sqlmap is Tampering. Tampering gives us some
 functions/techniques to evade filters and WAF's.
 
