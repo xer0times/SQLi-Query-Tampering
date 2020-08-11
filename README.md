@@ -1,13 +1,13 @@
 SQLi Query Tampering
 ==================
-SQLi Query Tampering extends and add custom Payload Generator/Processor in 
+SQLi Query Tampering extends and adds custom Payload Generator/Processor in 
 Burp Suite's Intruder. 
 
 ![](img/intruder.png)
 
 #### Advantages and Benefits
 Sqlmap is a great automated tool for SQL vulnerabilities but it can be a little
-noisy when you perform penetesting or bug hunting!
+noisy when you perform pentesting or bug hunting!
 One of the cool part of Sqlmap is Tampering. Tampering gives us some
 functions/techniques to evade filters and WAF's.
 
@@ -40,7 +40,7 @@ The list of Evasion Techniques:
 > space2comment, space2dash, space2hash, space2morecomment, space2morehash, 
 > space2mssqlblank, space2mssqlhash, space2mysqlblank, space2mysqldash, space2plus, 
 > space2randomblank, symboliclogical, unionalltounion, unmagicquotes, uppercase, 
-> versionedkeywords, versionedmorekeywords
+> versionedkeywords, versionedmorekeywords, 0eunion, misunion, schemasplit, binary
 
 #### Requirements:
 - Burp Suite Professional
@@ -64,5 +64,11 @@ The list of Evasion Techniques:
 ![](img/url-decod.png)
 
 #### Changelog:
+**1.1:**
+  - Add tamper techniques:
+    - 0eunion: Replaces instances of `<int> UNION` with `<int>e0UNION`
+    - misunion: Replaces instances of `UNION` with `-.1UNION`
+    - schemasplit: Replaces instances of `DBName.TableName`  with `DBName 9.e.TableName`
+    - binary: Injects keyword binary where possible
 **1.0:**
   - Release
