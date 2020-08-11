@@ -40,7 +40,8 @@ The list of Evasion Techniques:
 > space2comment, space2dash, space2hash, space2morecomment, space2morehash, 
 > space2mssqlblank, space2mssqlhash, space2mysqlblank, space2mysqldash, space2plus, 
 > space2randomblank, symboliclogical, unionalltounion, unmagicquotes, uppercase, 
-> versionedkeywords, versionedmorekeywords, 0eunion, misunion, schemasplit, binary
+> versionedkeywords, versionedmorekeywords, 0eunion, misunion, schemasplit, binary,
+> dunion
 
 #### Requirements:
 - Burp Suite Professional
@@ -70,5 +71,6 @@ The list of Evasion Techniques:
     - misunion: Replaces instances of `UNION` with `-.1UNION`
     - schemasplit: Replaces instances of `DBName.TableName`  with `DBName 9.e.TableName`
     - binary: Injects keyword binary where possible
+    - dunion: Replaces instances of `<int> UNION` with `<int>DUNION`
 **1.0:**
   - Release
