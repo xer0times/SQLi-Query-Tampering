@@ -72,5 +72,6 @@ The list of Evasion Techniques:
     - schemasplit: Replaces instances of `DBName.TableName`  with `DBName 9.e.TableName`
     - binary: Injects keyword binary where possible
     - dunion: Replaces instances of `<int> UNION` with `<int>DUNION`
+  
 **1.0:**
   - Release
