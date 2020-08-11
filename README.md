@@ -63,9 +63,6 @@ The list of Evasion Techniques:
 
 ![](img/url-decod.png)
 
-#### Bugs
-Please make a Github issue.
-
 #### Changelog:
 **1.1:**
   - Add tamper techniques:
