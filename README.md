@@ -5,7 +5,8 @@ Burp Suite's Intruder.
 
 ![](img/intruder.png)
 
-#### Advantages and Benefits
+## Advantages and Benefits
+
 Sqlmap is a great automated tool for SQL vulnerabilities but it can be a little
 noisy when you perform pentesting or bug hunting!
 One of the cool part of Sqlmap is Tampering. Tampering gives us some
@@ -43,11 +44,12 @@ The list of Evasion Techniques:
 > versionedkeywords, versionedmorekeywords, 0eunion, misunion, schemasplit, binary,
 > dunion
 
-#### Requirements:
+## Requirements:
+
 - Burp Suite Professional
 - Jython 2.7 standalone: http://www.jython.org/downloads.html
 
-#### Manual installation:
+## Manual installation:
 
 1. `Extender` -> `Options`
 2. Click `Select file` under `Python environment`
@@ -58,13 +60,37 @@ The list of Evasion Techniques:
 7. Choose `sqli_query_tampering.py`
 8. Done!
 
-#### Usage notes:
+## Usage notes:
+
 - All Tampered Queries (in Generator/Processor) returned in URL-Encoded
 - You can add a decode rule in Payload Processing section if you need URL-decoded payloads
 
 ![](img/url-decod.png)
 
-#### Changelog:
+## Bug and Feature Request
+
+Feel free to submit issues and enhancement requests.
+
+## Contributing
+
+We appreciate all forms of contribution. When contributing to this repository, 
+please first discuss the change you wish to make via issue, email, or any other 
+method with the owners of this repository before making a change. 
+Contribution can include adding new feature,tampering technique based on your 
+experience/articles/sqlmap repo, making typo corrections and much more. 
+In general, we follow the "fork-and-pull" Git workflow.
+
+1. Fork the repo on GitHub
+2. Clone the project to your own machine
+3. Commit changes to your own branch
+4. Check and Test your changes. You could use `http://testphp.vulnweb.com/artists.php?artist=1` url as target and make sure the extension works properly.
+5. Push your work back up to your fork
+6. Submit a Pull request so that we can review your changes
+
+NOTE: Be sure to merge the latest from "upstream" before making a pull request!
+
+## Changelog:
+
 **1.1:**
   - Add tamper techniques:
     - 0eunion: Replaces instances of `<int> UNION` with `<int>e0UNION`
