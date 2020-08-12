@@ -7,3 +7,4 @@
 .class
 # Local History for Visual Studio Code
 .history/
+*$py.class
