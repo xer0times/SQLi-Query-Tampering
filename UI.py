@@ -39,21 +39,38 @@ class PluginUI():
             for item in items:
                 self.extender.PayloadList.append(item)
             self.listPayloads.setListData(self.extender.PayloadList)
+        self.writePayloadsListFile()
+
+    def loadPayloadButtonAction(self, event):
+        fileChooser = JFileChooser()       
+        fileChooser.dialogTitle = 'Choose Payload List'
+        fileChooser.fileSelectionMode = JFileChooser.FILES_ONLY
+        if (fileChooser.showOpenDialog(self.mainPanel) == JFileChooser.APPROVE_OPTION):
+            file = fileChooser.getSelectedFile()
+            with open(file.getAbsolutePath(),'r') as reader:
+                    for line in reader.readlines():
+                        self.extender.PayloadList.append(line.strip('\n'))
+            self.listPayloads.setListData(self.extender.PayloadList)
+            self.showMessage('{} payloads loaded'.format(len(self.extender.PayloadList)))
+            self.writePayloadsListFile()
 
     def removePayloadButtonAction(self, event):
         for item in self.listPayloads.getSelectedValuesList():
             self.extender.PayloadList.remove(item)
         self.listPayloads.setListData(self.extender.PayloadList)
+        self.writePayloadsListFile()
 
     def clearPayloadButtonAction(self, event):
         self.extender.PayloadList[:] = []
         self.listPayloads.setListData(self.extender.PayloadList)
+        self.writePayloadsListFile()
 
     def addPayloadButtonAction(self, event):
         if str(self.textNewPayload.text).strip():
             self.extender.PayloadList.append(self.textNewPayload.text)
             self.textNewPayload.text = ''
             self.listPayloads.setListData(self.extender.PayloadList)
+        self.writePayloadsListFile()
 
     def toClipboardButtonAction(self, event):
         self.extender.generatePayloads()
@@ -87,6 +104,30 @@ class PluginUI():
         result = '\n'.join(tamperedPayloads)
         self.textTamperedPayload.text = result
 
+    def comboProcessorTechAction(self, event):
+        varName = 'SQLiQueryTampering_comboProcessorTech'
+        state = str(self.comboProcessorTech.getSelectedIndex())
+        self.extender.callbacks.saveExtensionSetting(varName, state)
+
+    def OnCheck(self, event):
+        chk = event.getSource()
+        varName = 'SQLiQueryTampering_{}'.format(chk.text)
+        state =str(1 if chk.isSelected() else 0)
+        self.extender.callbacks.saveExtensionSetting(varName, state)
+
+    def writePayloadsListFile(self):
+        payloads = '\n'.join(self.extender.PayloadList)
+        payloads = payloads.encode('utf-8')
+        with open('payloads.lst','w') as writer:
+                writer.write(payloads)
+
+    def readPayloadsListFile(self):
+        result = []
+        with open('payloads.lst','r') as reader:
+                for line in reader.readlines():
+                    result.append(line.strip('\n'))
+        return result
+
     def initComponents(self):
         TabbedPane1 = JTabbedPane()
         GeneratorScrollPane = JScrollPane()
@@ -96,6 +137,7 @@ class PluginUI():
         spanePayloadList = JScrollPane()
         self.listPayloads = JList()
         pastePayloadButton = JButton(actionPerformed=self.pastePayloadButtonAction)
+        loadPayloadButton = JButton(actionPerformed=self.loadPayloadButtonAction)
         removePayloadButton = JButton(actionPerformed=self.removePayloadButtonAction)
         clearPayloadButton = JButton(actionPerformed=self.clearPayloadButtonAction)
         self.textNewPayload = JTextField()
@@ -103,21 +145,21 @@ class PluginUI():
         jSeparator1 = JSeparator()
         jlbl3 = JLabel()
         jlbl4 = JLabel()
-        self.chkGeneral = JCheckBox()
-        self.chkMAXDB = JCheckBox()
-        self.chkMSSQL = JCheckBox()
-        self.chkMSAccess = JCheckBox()
-        self.chkPostgres = JCheckBox()
-        self.chkOracle = JCheckBox()
-        self.chkSqlite = JCheckBox()
-        self.chkMysql = JCheckBox()
+        self.chkGeneral = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkMAXDB = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkMSSQL = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkMSAccess = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkPostgres = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkOracle = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkSqlite = JCheckBox(actionPerformed = self.OnCheck)
+        self.chkMysql = JCheckBox(actionPerformed = self.OnCheck)
         jlbl5 = JLabel()
         toClipboardButton = JButton(actionPerformed=self.toClipboardButtonAction)
         toFileButton = JButton(actionPerformed=self.toFileButtonAction)
         ProcessorScrollPane = JScrollPane()
         ProcessorPanel = JPanel()
         jLabel1 = JLabel()
-        self.comboProcessorTech = JComboBox()
+        self.comboProcessorTech = JComboBox(itemStateChanged=self.comboProcessorTechAction)
         jSeparator2 = JSeparator()
         jLabel2 = JLabel()
         jLabel3 = JLabel()
@@ -135,22 +177,12 @@ class PluginUI():
         jlbl2.setText("This payload type lets you configure a simple list of strings that are used as payloads.")
 
         spanePayloadList.setViewportView(self.listPayloads)
-        self.extender.PayloadList=[
-            "%",
-            "'",
-            "\"\"",
-            "''",
-            "'",
-            "'--",
-            "; waitfor delay '0:30:0'--",
-            "1;waitfor delay '0:30:0'--",
-           "(\",)')(,(("
-        ]
+        self.extender.PayloadList = self.readPayloadsListFile() 
         self.listPayloads.setListData(self.extender.PayloadList)
 
         pastePayloadButton.setText("Paste")
-        pastePayloadButton.setActionCommand("pastePayloadButton")
-        # pastePayloadButton.addActionListener()
+
+        loadPayloadButton.setText("Load")
 
         removePayloadButton.setText("Remove")
 
@@ -167,21 +199,44 @@ class PluginUI():
         jlbl4.setText("You can select the techniques that you want to perform processing tasks on each user-defined payload")
 
         self.chkGeneral.setText("General")
-        self.chkGeneral.setSelected(True)
+        varName = 'SQLiQueryTampering_{}'.format(self.chkGeneral.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkGeneral.setSelected(int(state))
 
         self.chkMAXDB.setText("SAP MAX DB")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkMAXDB.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkMAXDB.setSelected(int(state))
 
         self.chkMSSQL.setText("MS SQL Server")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkMSSQL.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkMSSQL.setSelected(int(state))
 
         self.chkMSAccess.setText("MS Access")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkMSAccess.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkMSAccess.setSelected(int(state))
 
         self.chkPostgres.setText("Postgres SQL")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkPostgres.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkPostgres.setSelected(int(state))
 
         self.chkOracle.setText("Oracle")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkOracle.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkOracle.setSelected(int(state))
 
         self.chkSqlite.setText("Sqlite")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkSqlite.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkSqlite.setSelected(int(state))
 
         self.chkMysql.setText("MySql")
+        varName = 'SQLiQueryTampering_{}'.format(self.chkMysql.text)
+        state = self.extender.callbacks.loadExtensionSetting(varName)
+        if state : self.chkMysql.setSelected(int(state))
 
         jlbl5.setText("[?] Save the Generated/Tampered Payloads to :")
 
@@ -206,6 +261,7 @@ class PluginUI():
                                 .addGroup(GeneratorPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING, False)
                                     .addComponent(removePayloadButton, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(clearPayloadButton, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(loadPayloadButton, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(pastePayloadButton, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(addPayloadButton, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addGap(21, 21, 21)
@@ -250,9 +306,11 @@ class PluginUI():
                     .addComponent(spanePayloadList, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                     .addGroup(GeneratorPanelLayout.createSequentialGroup()
                         .addComponent(pastePayloadButton)
-                        .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(loadPayloadButton)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(removePayloadButton)
-                        .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(clearPayloadButton)))
                 .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(GeneratorPanelLayout.createParallelGroup(GroupLayout.Alignment.BASELINE)
@@ -287,10 +345,14 @@ class PluginUI():
         GeneratorScrollPane.setViewportView(GeneratorPanel)
 
         TabbedPane1.addTab("Generator", GeneratorScrollPane)
+
+        varName = 'SQLiQueryTampering_comboProcessorTech'
+        state = self.extender.callbacks.loadExtensionSetting(varName)
         
         for item in self.extender.getTamperFuncsName():
             self.comboProcessorTech.addItem(item)
-        self.comboProcessorTech.setSelectedIndex(0)
+        
+        if state : self.comboProcessorTech.setSelectedIndex(int(state))
 
         jLabel1.setText("Processor Technique :")
 
@@ -308,7 +370,7 @@ class PluginUI():
         self.textTamperedPayload.setRows(5)
         jScrollPane2.setViewportView(self.textTamperedPayload)
 
-        tamperPayloadButton.setText("Tamper Payload")
+        tamperPayloadButton.setText("Tamper Payloads")
 
         ProcessorPanelLayout = GroupLayout(ProcessorPanel)
         ProcessorPanel.setLayout(ProcessorPanelLayout)

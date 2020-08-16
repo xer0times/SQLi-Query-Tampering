@@ -91,6 +91,12 @@ NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 
 ## Changelog:
 
+**1.2:**
+  - Add tamper technique:
+    - equaltorlike: Replaces all occurrences of operator equal (`=`) with `RLIKE` counterpart
+  - Add `Load` button in User-Defined Payloads section.
+  - Auto saves the Tamper Techniques, User-Defined Payloads and Processor Technique configuration.
+
 **1.1:**
   - Add tamper techniques:
     - 0eunion: Replaces instances of `<int> UNION` with `<int>e0UNION`

@@ -88,7 +88,7 @@ class SQLiTamper():
                     self.htmlencode, self.hex2char, self.halfversionedmorekeywords, self.greatest, self.escapequotes, self.equaltolike, self.concat2concatws, \
                     self.commentbeforeparentheses, self.commalessmid, self.commalesslimit, self.charunicodeescape, self.charunicodeencode, self.charencode, \
                     self.bluecoat, self.between, self.appendnullbyte, self.apostrophenullencode, self.apostrophemask, self.e0UNION,
-                    self.misunion, self.schemasplit, self.binary, self.dunion]
+                    self.misunion, self.schemasplit, self.binary, self.dunion, self.equaltorlike]
         self._General = [self.chardoubleencode, self.unmagicquotes, self.unionalltounion, self.symboliclogical, \
                         self.space2plus, self.randomcomments, self.randomcase, self.overlongutf8more, self.overlongutf8, \
                         self.multiplespaces, self.htmlencode, self.escapequotes, self.charunicodeescape, self.apostrophenullencode, \
@@ -111,7 +111,7 @@ class SQLiTamper():
                         self.halfversionedmorekeywords, self.greatest, self.equaltolike, self.concat2concatws, self.commentbeforeparentheses, \
                         self.commalessmid, self.commalesslimit, self.charunicodeencode, self.charencode, self.bluecoat, self.between, self.multiplespaces, \
                         self.randomcase, self.space2comment, self.space2plus, self.unionalltounion, self.unmagicquotes, self.e0UNION,
-                        self.misunion, self.schemasplit, self.binary]
+                        self.misunion, self.schemasplit, self.binary, self.equaltorlike]
         self._Oracle = [self.uppercase, self.space2randomblank, self.space2comment, self.lowercase, self.least, self.greatest, \
                         self.commentbeforeparentheses, self.charencode, self.between, self.equaltolike, self.multiplespaces, \
                         self.randomcase, self.space2plus, self.unionalltounion, self.unmagicquotes, self.dunion]
@@ -1808,3 +1808,24 @@ class SQLiTamper():
 
         return re.sub("(\d+)\s+(UNION )", r"\g<1>D\g<2>", payload, re.I) if payload else payload
 
+    def equaltorlike(self, payload, **kwargs):
+        """
+        Replaces all occurrences of operator equal ('=') with 'RLIKE' counterpart
+
+        Tested against:
+            * MySQL 4, 5.0 and 5.5
+
+        Notes:
+            * Useful to bypass weak and bespoke web application firewalls that
+            filter the equal character ('=')
+
+        >>> tamper('SELECT * FROM users WHERE id=1')
+        'SELECT * FROM users WHERE id RLIKE 1'
+        """
+
+        retVal = payload
+
+        if payload:
+            retVal = re.sub(r"\s*=\s*", " RLIKE ", retVal)
+
+        return retVal

@@ -26,7 +26,7 @@ class BurpExtender(IBurpExtender, IIntruderPayloadGeneratorFactory, IIntruderPay
     callbacks.registerIntruderPayloadProcessor(self)
 
     callbacks.addSuiteTab(self)
-    print('SQLi Query Tampering v 1.1\nCreated by Xer0Days')
+    print('SQLi Query Tampering v 1.2\nCreated by Xer0Days')
     print('Based on Sqlmap\'s Tampering Functions\n')
     print('---------------------------------------------')
     print('Github:\t\thttps://github.com/xer0days\nTwitter:\thttps://twitter.com/Xer0Days')
