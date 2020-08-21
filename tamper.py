@@ -4,7 +4,11 @@ import os
 import random
 import re
 import string
+import random
+import binascii
+import codecs
 
+IGNORE_SPACE_AFFECTED_KEYWORDS = ("CAST", "COUNT", "EXTRACT", "GROUP_CONCAT", "MAX", "MID", "MIN", "SESSION_USER", "SUBSTR", "SUBSTRING", "SUM", "SYSTEM_USER", "TRIM")
 
 class OrderedSet(collections.MutableSet):
     """
@@ -134,6 +138,116 @@ class SQLiTamper():
             'SAP_MaxDB':self._SAP_MaxDB,
             'SQLite':self._SQLite
         }
+
+    def randomRange(self, start=0, stop=1000, seed=None):
+        randint = random.randint
+        return int(randint(start, stop))
+
+    def zeroDepthSearch(self, expression, value):
+        """
+        Searches occurrences of value inside expression at 0-depth level
+        regarding the parentheses
+        >>> _ = "SELECT (SELECT id FROM users WHERE 2>1) AS result FROM DUAL"; _[zeroDepthSearch(_, "FROM")[0]:]
+        'FROM DUAL'
+        >>> _ = "a(b; c),d;e"; _[zeroDepthSearch(_, "[;, ]")[0]:]
+        ',d;e'
+        """
+
+        retVal = []
+
+        depth = 0
+        for index in xrange(len(expression)):
+            if expression[index] == '(':
+                depth += 1
+            elif expression[index] == ')':
+                depth -= 1
+            elif depth == 0:
+                if value.startswith('[') and value.endswith(']'):
+                    if re.search(value, expression[index:index + 1]):
+                        retVal.append(index)
+                elif expression[index:index + len(value)] == value:
+                    retVal.append(index)
+
+        return retVal
+    
+    def getOrds(self, value):
+        """
+        Returns ORD(...) representation of provided string value
+        >>> getOrds(u'fo\\xf6bar')
+        [102, 111, 246, 98, 97, 114]
+        >>> getOrds(b"fo\\xc3\\xb6bar")
+        [102, 111, 195, 182, 98, 97, 114]
+        """
+
+        return [_ if isinstance(_, int) else ord(_) for _ in value]
+
+    def getText(self, value, encoding=None):
+        """
+        Returns textual value of a given value (Note: not necessary Unicode on Python2)
+        >>> getText(b"foobar")
+        'foobar'
+        >>> isinstance(getText(u"fo\\u2299bar"), six.text_type)
+        True
+        """
+
+        retVal = value
+
+        if isinstance(value, str):
+            retVal = self.getUnicode(value, encoding)
+        try:
+            retVal = str(retVal)
+        except:
+            pass
+
+        return retVal
+
+    def decodeHex(self, value, binary=True):
+        """
+        Returns a decoded representation of provided hexadecimal value
+        >>> decodeHex("313233") == b"123"
+        True
+        >>> decodeHex("313233", binary=False) == u"123"
+        True
+        """
+
+        retVal = value
+        try:
+            if isinstance(value, str):
+                value = self.getText(value)
+
+            if value.lower().startswith("0x"):
+                value = value[2:]
+
+            try:
+                retVal = codecs.decode(value, "hex")
+            except LookupError:
+                retVal = binascii.unhexlify(value)
+
+            if not binary:
+                retVal = self.getText(retVal)
+        except:
+            pass
+        
+        return retVal
+
+    def getUnicode(self, value, encoding=None, noneToNull=False):
+        """
+        Returns the unicode representation of the supplied value
+        >>> getUnicode('test') == u'test'
+        True
+        >>> getUnicode(1) == u'1'
+        True
+        """
+
+        if noneToNull and value is None:
+            return None
+
+        if isinstance(value, unicode):
+            return value
+        elif isinstance(value, str):
+            return value.encode('utf-8')
+        
+        return None
 
     def randomInt(self, length=4, seed=None):
         """
@@ -855,12 +969,12 @@ class SQLiTamper():
                     _ = word[0]
 
                     for i in xrange(1, len(word) - 1):
-                        _ += "%s%s" % ("/**/" if randomRange(0, 1) else "", word[i])
+                        _ += "%s%s" % ("/**/" if self.randomRange(0, 1) else "", word[i])
 
                     _ += word[-1]
 
                     if "/**/" not in _:
-                        index = randomRange(1, len(word) - 1)
+                        index = self.randomRange(1, len(word) - 1)
                         _ = word[:index] + "/**/" + word[index:]
 
                     retVal = retVal.replace(word, _)
@@ -903,7 +1017,7 @@ class SQLiTamper():
                         _ = ""
 
                         for i in xrange(len(word)):
-                            _ += word[i].upper() if randomRange(0, 1) else word[i].lower()
+                            _ += word[i].upper() if self.randomRange(0, 1) else word[i].lower()
 
                         if len(_) > 1 and _ not in (_.lower(), _.upper()):
                             break
@@ -937,7 +1051,7 @@ class SQLiTamper():
                 parts = []
                 last = 0
 
-                for index in zeroDepthSearch(old, '+'):
+                for index in self.zeroDepthSearch(old, '+'):
                     parts.append(old[last:index].strip('+'))
                     last = index
 
@@ -974,7 +1088,7 @@ class SQLiTamper():
                 part = match.group(0)
 
                 chars = [char for char in part]
-                for index in zeroDepthSearch(part, '+'):
+                for index in self.zeroDepthSearch(part, '+'):
                     chars[index] = ','
 
                 replacement = "CONCAT(%s)" % "".join(chars)
@@ -1338,9 +1452,9 @@ class SQLiTamper():
         if payload:
             for match in re.finditer(r"\b0x([0-9a-f]+)\b", retVal):
                 if len(match.group(1)) > 2:
-                    result = "CONCAT(%s)" % ','.join("CHAR(%d)" % _ for _ in getOrds(decodeHex(match.group(1))))
+                    result = "CONCAT(%s)" % ','.join("CHAR(%d)" % _ for _ in self.getOrds(self.decodeHex(match.group(1))))
                 else:
-                    result = "CHAR(%d)" % ord(decodeHex(match.group(1)))
+                    result = "CHAR(%d)" % ord(self.decodeHex(match.group(1)))
                 retVal = retVal.replace(match.group(0), result)
 
         return retVal

@@ -42,7 +42,7 @@ The list of Evasion Techniques:
 > space2mssqlblank, space2mssqlhash, space2mysqlblank, space2mysqldash, space2plus, 
 > space2randomblank, symboliclogical, unionalltounion, unmagicquotes, uppercase, 
 > versionedkeywords, versionedmorekeywords, 0eunion, misunion, schemasplit, binary,
-> dunion
+> dunion, equaltorlike
 
 ## Requirements:
 
@@ -90,6 +90,12 @@ In general, we follow the "fork-and-pull" Git workflow.
 NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 
 ## Changelog:
+
+**1.3:**
+  - Add Options tab:
+    - Payloads Directory
+    - Restore Defaults
+  - Fix some issues in UI and Tamper module
 
 **1.2:**
   - Add tamper technique:

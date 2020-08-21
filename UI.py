@@ -7,6 +7,7 @@ from java.lang import Short
 from java.io import File
 from java.awt.datatransfer  import DataFlavor, StringSelection
 
+import os
 class PluginUI():
     def __init__(self, extender):
         self.extender = extender
@@ -66,9 +67,9 @@ class PluginUI():
         self.writePayloadsListFile()
 
     def addPayloadButtonAction(self, event):
-        if str(self.textNewPayload.text).strip():
-            self.extender.PayloadList.append(self.textNewPayload.text)
-            self.textNewPayload.text = ''
+        if str(self.textPayload.text).strip():
+            self.extender.PayloadList.append(self.textPayload.text)
+            self.textPayload.text = ''
             self.listPayloads.setListData(self.extender.PayloadList)
         self.writePayloadsListFile()
 
@@ -87,10 +88,9 @@ class PluginUI():
         if (fileChooser.showSaveDialog(self.mainPanel) == JFileChooser.APPROVE_OPTION):
             file = fileChooser.getSelectedFile()
             self.extender.generatePayloads()
-            result = '\n'
-            result = result.join(self.extender.tamperedPayloads)
+            result = '\n'.join(self.extender.tamperedPayloads)
             with open(file.getAbsolutePath(),'w') as writer:
-                writer.writelines(result)
+                writer.writelines(result.encode('utf-8'))
             self.showMessage('{} url encoded payload written to file'.format(len(self.extender.tamperedPayloads)))
 
     def tamperPayloadButtonAction(self, event):
@@ -128,6 +128,68 @@ class PluginUI():
                     result.append(line.strip('\n'))
         return result
 
+    def restoreDefaultsButtonAction(self, event):
+        self.extender.callbacks.saveExtensionSetting('SQLiQueryTampering_PayloadsDirectory', None)
+        self.textPayloadsDir.text = ''
+        self.textPlainPayload.text = ''
+        self.textTamperedPayload.text = ''
+        self.comboProcessorTech.setSelectedIndex(0)
+
+        varName = 'SQLiQueryTampering_{}'
+        self.chkGeneral.setSelected(1)
+        tmpVarName = varName.format(self.chkGeneral.text)
+        self.extender.callbacks.saveExtensionSetting(tmpVarName, '1')
+
+        for item in (self.chkMAXDB,self.chkMSSQL,self.chkMSAccess,
+                     self.chkPostgres,self.chkOracle,self.chkSqlite,self.chkMysql):
+            item.setSelected(0)
+            tmpVarName = 'SQLiQueryTampering_{}'.format(item.text)
+            self.extender.callbacks.saveExtensionSetting(tmpVarName, '0')
+
+        self.extender.PayloadList = [
+            "%",
+            "'",
+            "''",
+            "\"\"",
+            "\"",
+            "'\"--",
+            "'; waitfor delay '0:30:0'--",
+            "1;waitfor delay '0:30:0'--",
+            "(\",)')(,(("
+        ]
+        self.listPayloads.setListData(self.extender.PayloadList)
+        self.writePayloadsListFile()
+
+    def readPayloadsFromDir(self, directory):
+        result = []
+        for root, subdirs, files in os.walk(directory):
+            for name in files:
+                fPath = os.path.join(root, name)
+                with open(fPath,'r') as reader:
+                    for line in reader.readlines():
+                        result.append(line.strip('\n'))
+        return result
+
+    def dirBrowseButtonButtonAction(self, event):
+        fileChooser = JFileChooser()       
+        fileChooser.dialogTitle = 'Choose Directory'
+        fileChooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+        if (fileChooser.showOpenDialog(self.mainPanel) == JFileChooser.APPROVE_OPTION):
+            file = fileChooser.getSelectedFile()
+            varName = 'SQLiQueryTampering_PayloadsDirectory'
+            path = file.getAbsolutePath()
+            self.extender.callbacks.saveExtensionSetting(varName, path)
+            self.textPayloadsDir.text = path
+            self.extender.PayloadList = self.readPayloadsFromDir(path)
+            self.listPayloads.setListData(self.extender.PayloadList)
+            self.showMessage('{} payloads loaded'.format(len(self.extender.PayloadList)))
+    
+    def reloadPayloadsButtonAction(self, event):
+        path = self.textPayloadsDir.text
+        self.extender.PayloadList = self.readPayloadsFromDir(path)
+        self.listPayloads.setListData(self.extender.PayloadList)
+        self.showMessage('{} payloads loaded'.format(len(self.extender.PayloadList)))
+
     def initComponents(self):
         TabbedPane1 = JTabbedPane()
         GeneratorScrollPane = JScrollPane()
@@ -136,6 +198,19 @@ class PluginUI():
         jlbl2 = JLabel()
         spanePayloadList = JScrollPane()
         self.listPayloads = JList()
+        OptionsScrollPane = JScrollPane()
+        self.textPayloadsDir = JTextField()
+        ProcessorPanel1 = JPanel()
+        dirBrowseButton = JButton(actionPerformed=self.dirBrowseButtonButtonAction)
+        restoreDefaultsButton = JButton(actionPerformed=self.restoreDefaultsButtonAction)
+        reloadPayloadsButton  = JButton(actionPerformed=self.reloadPayloadsButtonAction)
+        OptionsScrollPane = JScrollPane()
+        OptionsPanel = JPanel()
+        jlbl6 = JLabel()
+        jlbl7 = JLabel()
+        jlbl9 = JLabel()
+        jlbl10 = JLabel()
+        jSeparator3 = JSeparator()
         pastePayloadButton = JButton(actionPerformed=self.pastePayloadButtonAction)
         loadPayloadButton = JButton(actionPerformed=self.loadPayloadButtonAction)
         removePayloadButton = JButton(actionPerformed=self.removePayloadButtonAction)
@@ -172,12 +247,19 @@ class PluginUI():
 
         jlbl1.setForeground(Color(255, 102, 51))
         jlbl1.setFont(Font(jlbl1.getFont().toString(), 1, 14))
-        jlbl1.setText("User-Defiend Payloads")
+        jlbl1.setText("User-Defined Payloads")
 
         jlbl2.setText("This payload type lets you configure a simple list of strings that are used as payloads.")
 
         spanePayloadList.setViewportView(self.listPayloads)
-        self.extender.PayloadList = self.readPayloadsListFile() 
+        varName = 'SQLiQueryTampering_PayloadsDirectory'
+        path = self.extender.callbacks.loadExtensionSetting(varName)
+        if path : 
+            self.textPayloadsDir.text = path
+            self.extender.PayloadList = self.readPayloadsFromDir(path)
+        else:
+            self.extender.PayloadList = self.readPayloadsListFile() 
+
         self.listPayloads.setListData(self.extender.PayloadList)
 
         pastePayloadButton.setText("Paste")
@@ -267,7 +349,7 @@ class PluginUI():
                                 .addGap(21, 21, 21)
                                 .addGroup(GeneratorPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
                                     .addComponent(self.textNewPayload)
-                                    .addComponent(spanePayloadList)))
+                                    .addComponent(spanePayloadList, GroupLayout.DEFAULT_SIZE, 563, Short.MAX_VALUE)))
                             .addComponent(jlbl1)
                             .addComponent(jlbl3)
                             .addGroup(GeneratorPanelLayout.createSequentialGroup()
@@ -425,6 +507,85 @@ class PluginUI():
         ProcessorScrollPane.setViewportView(ProcessorPanel)
 
         TabbedPane1.addTab("Processor", ProcessorScrollPane)
+
+        jlbl6.setForeground( Color(255, 102, 51))
+        jlbl6.setFont(Font(jlbl6.getFont().toString(), 1, 14))
+        jlbl6.setText("Payloads Directory")
+
+        jlbl9.setText("Choose your own directory containing payload files:")
+
+        dirBrowseButton.setText("...")
+        dirBrowseButton.setToolTipText("Browse")
+
+        jlbl10.setText("If you want to remove any previously applied preferences:")
+
+        restoreDefaultsButton.setText("Restore")
+        reloadPayloadsButton.setText("Reload")
+
+        jlbl7.setForeground( Color(255, 102, 51))
+        jlbl7.setFont(Font(jlbl7.getFont().toString(), 1, 14))
+        jlbl7.setText("Restore Defaults")
+
+        OptionsPanelLayout =  GroupLayout(OptionsPanel)
+        OptionsPanel.setLayout(OptionsPanelLayout)
+        OptionsPanelLayout.setHorizontalGroup(
+            OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+            .addGroup(OptionsPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                    .addGroup(OptionsPanelLayout.createSequentialGroup()
+                        .addGap(12, 12, 12)
+                        .addComponent(jlbl7)
+                        .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(OptionsPanelLayout.createSequentialGroup()
+                        .addGroup(OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                            .addComponent(jSeparator3)
+                            .addGroup(OptionsPanelLayout.createSequentialGroup()
+                                .addComponent(self.textPayloadsDir)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(dirBrowseButton, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(reloadPayloadsButton))
+                            .addGroup(OptionsPanelLayout.createSequentialGroup()
+                                .addGroup(OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                    .addComponent(jlbl9)
+                                    .addGroup(OptionsPanelLayout.createSequentialGroup()
+                                        .addGap(8, 8, 8)
+                                        .addComponent(jlbl6)))
+                                .addGap(0, 0, Short.MAX_VALUE)))
+                        .addContainerGap())
+                    .addGroup(OptionsPanelLayout.createSequentialGroup()
+                        .addComponent(jlbl10)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(restoreDefaultsButton)
+                        .addGap(0, 150, Short.MAX_VALUE))))
+        )
+        OptionsPanelLayout.setVerticalGroup(
+            OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+            .addGroup(OptionsPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jlbl6)
+                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jlbl9)
+                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.TRAILING, False)
+                    .addComponent(dirBrowseButton, GroupLayout.Alignment.LEADING, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(reloadPayloadsButton, GroupLayout.Alignment.LEADING, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(self.textPayloadsDir))
+                .addGap(18, 18, 18)
+                .addComponent(jSeparator3, GroupLayout.PREFERRED_SIZE, 10, GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jlbl7)
+                .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(OptionsPanelLayout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                    .addComponent(jlbl10)
+                    .addComponent(restoreDefaultsButton))
+                .addContainerGap(254, Short.MAX_VALUE))
+        )
+
+        OptionsScrollPane.setViewportView(OptionsPanel)
+
+        TabbedPane1.addTab("Options", OptionsScrollPane)
 
         self.mainPanel = JPanel()
         layout = GroupLayout(self.mainPanel)
