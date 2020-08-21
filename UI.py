@@ -187,9 +187,10 @@ class PluginUI():
     
     def reloadPayloadsButtonAction(self, event):
         path = self.textPayloadsDir.text
-        self.extender.PayloadList = self.readPayloadsFromDir(path)
-        self.listPayloads.setListData(self.extender.PayloadList)
-        self.showMessage('{} payloads loaded'.format(len(self.extender.PayloadList)))
+        if path.strip():
+            self.extender.PayloadList = self.readPayloadsFromDir(path)
+            self.listPayloads.setListData(self.extender.PayloadList)
+            self.showMessage('{} payloads loaded'.format(len(self.extender.PayloadList)))
 
     def initComponents(self):
         TabbedPane1 = JTabbedPane()
