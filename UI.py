@@ -67,9 +67,9 @@ class PluginUI():
         self.writePayloadsListFile()
 
     def addPayloadButtonAction(self, event):
-        if str(self.textPayload.text).strip():
-            self.extender.PayloadList.append(self.textPayload.text)
-            self.textPayload.text = ''
+        if str(self.textNewPayload.text).strip():
+            self.extender.PayloadList.append(self.textNewPayload.text)
+            self.textNewPayload.text = ''
             self.listPayloads.setListData(self.extender.PayloadList)
         self.writePayloadsListFile()
 
