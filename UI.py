@@ -155,7 +155,8 @@ class PluginUI():
             "'\"--",
             "'; waitfor delay '0:30:0'--",
             "1;waitfor delay '0:30:0'--",
-            "(\",)')(,(("
+            "(\",)')(,((",
+            "));waitfor delay '0:0:__TIME__'--"
         ]
         self.listPayloads.setListData(self.extender.PayloadList)
         self.writePayloadsListFile()
